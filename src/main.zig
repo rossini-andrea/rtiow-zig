@@ -1,4 +1,5 @@
 const std = @import("std");
+const vec3 = @import("vec3.zig");
 
 pub fn main() !void {
     // stdout is for the actual output of your application, for example if you
@@ -20,12 +21,13 @@ pub fn main() !void {
     for (0..width) |y| {
         for (0..height) |x| {
             try stdlog.print("{d} %\n", .{@as(f64, @floatFromInt(y * width + x)) / ((height - 1) * width + width - 1) * 100});
+            const color = vec3.Color.init(
+                @as(f64, @floatFromInt(x)) / (width - 1),
+                @as(f64, @floatFromInt(y)) / (height - 1),
+                @as(f64, @floatFromInt(y * width + x)) / (height * width + width - 1),
+            );
 
-            const r: u8 = @as(u8, @intFromFloat(@as(f64, @floatFromInt(x)) / (width - 1) * 255.999));
-            const g: u8 = @as(u8, @intFromFloat(@as(f64, @floatFromInt(y)) / (height - 1) * 255.999));
-            const b: u8 = @as(u8, @intFromFloat(@as(f64, @floatFromInt(y * width + x)) / (height * width + width - 1) * 255.999));
-
-            try stdout.print("{} {} {}\n", .{ r, g, b });
+            try stdout.print("{}", .{color});
         }
     }
 
