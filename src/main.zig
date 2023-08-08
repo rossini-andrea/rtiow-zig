@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const vec3 = @import("vec3.zig");
 const raytracer = @import("raytracer.zig");
 
@@ -22,11 +23,10 @@ pub fn main() !void {
     const focal_length: f64 = 1.0;
     const viewport_height: f64 = 2.0;
     var viewport_width = viewport_height * (image_width_f / image_height_f);
-    _ = viewport_width;
     var camera_center = vec3.Point3.init(0, 0, 0);
 
-    var viewport_u = vec3.Point3.init(image_width_f, 0, 0);
-    var viewport_v = vec3.Point3.init(0, -image_height_f, 0);
+    var viewport_u = vec3.Point3.init(viewport_width, 0, 0);
+    var viewport_v = vec3.Point3.init(0, -viewport_height, 0);
 
     var pixel_delta_u = viewport_u.fraction(image_width_f);
     var pixel_delta_v = viewport_v.fraction(image_height_f);
@@ -40,10 +40,10 @@ pub fn main() !void {
 
     try stdout.print("P3\n{} {}\n255\n", .{ image_width, image_height });
 
-    for (0..image_width) |y| {
+    for (0..image_height) |y| {
         const y_f = @as(f64, @floatFromInt(y));
 
-        for (0..image_height) |x| {
+        for (0..image_width) |x| {
             const x_f = @as(f64, @floatFromInt(x));
             var pixel_center = pixel00_loc
                 .add(pixel_delta_u.scale(x_f))
@@ -56,13 +56,15 @@ pub fn main() !void {
             try stdout.print("{}", .{pixel_color});
         }
 
-        try stdlog.print("{d} %\n", .{(y_f / (image_height_f - 1.0)) * 100});
+        try stdlog.print("\x1B[7D{d:>6.2}%", .{(y_f / (image_height_f - 1.0)) * 100});
+        try bwl.flush();
     }
 
     try bw.flush(); // don't forget to flush!
 }
 
 fn ray_color(r: raytracer.Ray) vec3.Color {
-    _ = r;
-    return vec3.Color.init(0, 0, 0);
+    var unit_direction = r.direction.unitVector();
+    var alpha = math.clamp(0.5 * (unit_direction.y + 1.0), 0.0, 1.0);
+    return vec3.Color.init(1.0, 1.0, 1.0).scale(1.0 - alpha).add(vec3.Color.init(0.5, 0.7, 1.0).scale(alpha));
 }
