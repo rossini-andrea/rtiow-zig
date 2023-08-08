@@ -94,3 +94,4 @@ pub const Vec3 = struct {
 };
 
 pub const Color = Vec3;
+pub const Point3 = Vec3;
