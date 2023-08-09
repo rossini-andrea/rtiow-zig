@@ -63,18 +63,33 @@ pub fn main() !void {
     try bw.flush(); // don't forget to flush!
 }
 
-fn hitSphere(center: vec3.Point3, radius: f64, r: raytracer.Ray) bool {
+fn hitSphere(center: vec3.Point3, radius: f64, r: raytracer.Ray) f64 {
     const oc = r.origin.sub(center);
     const a = r.direction.dot(r.direction);
     const b = 2.0 * oc.dot(r.direction);
     const c = oc.dot(oc) - radius * radius;
     const discriminant = b * b - 4.0 * a * c;
-    return (discriminant >= 0.0);
+
+    if (discriminant < 0.0) {
+        return -1.0;
+    } else {
+        return (-b - @sqrt(discriminant)) / (2 * a);
+    }
 }
 
 fn rayColor(r: raytracer.Ray) vec3.Color {
-    if (hitSphere(vec3.Point3.init(0, 0, -1), 0.5, r)) {
-        return vec3.Color.init(1, 0, 0);
+    const t = hitSphere(vec3.Point3.init(0, 0, -1), 0.5, r);
+
+    if (t > 0.0) {
+        const normal = r.at(t)
+            .sub(vec3.Vec3.init(0.0, 0.0, -1.0))
+            .unitVector();
+        const result = normal.add(vec3.Color.init(1, 1, 1)).scale(0.5);
+        return vec3.Color.init(
+            math.clamp(result.x, 0.0, 1.0),
+            math.clamp(result.y, 0.0, 1.0),
+            math.clamp(result.z, 0.0, 1.0),
+        );
     }
 
     var unit_direction = r.direction.unitVector();
