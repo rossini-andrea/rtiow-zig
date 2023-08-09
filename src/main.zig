@@ -56,7 +56,7 @@ pub fn main() !void {
             try stdout.print("{}", .{pixel_color});
         }
 
-        try stdlog.print("\x1B[7D{d:>6.2}%", .{(y_f / (image_height_f - 1.0)) * 100});
+        try stdlog.print("\x1B[8D {d:>6.2}%", .{(y_f / (image_height_f - 1.0)) * 100});
         try bwl.flush();
     }
 
@@ -65,15 +65,15 @@ pub fn main() !void {
 
 fn hitSphere(center: vec3.Point3, radius: f64, r: raytracer.Ray) f64 {
     const oc = r.origin.sub(center);
-    const a = r.direction.dot(r.direction);
-    const b = 2.0 * oc.dot(r.direction);
-    const c = oc.dot(oc) - radius * radius;
-    const discriminant = b * b - 4.0 * a * c;
+    const a = r.direction.lengthSquared();
+    const half_b = oc.dot(r.direction);
+    const c = oc.lengthSquared() - radius * radius;
+    const discriminant = half_b * half_b - a * c;
 
     if (discriminant < 0.0) {
         return -1.0;
     } else {
-        return (-b - @sqrt(discriminant)) / (2 * a);
+        return (-half_b - @sqrt(discriminant)) / a;
     }
 }
 

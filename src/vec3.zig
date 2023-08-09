@@ -30,12 +30,12 @@ pub const Vec3 = struct {
     }
 
     pub fn length(self: Vec3) f64 {
-        return @sqrt(self.length_squared());
+        return @sqrt(self.lengthSquared());
     }
 
-    pub fn length_squared(self: Vec3) f64 {
+    pub fn lengthSquared(self: Vec3) f64 {
         return self.x * self.x +
-            self.x * self.x +
+            self.y * self.y +
             self.z * self.z;
     }
 
