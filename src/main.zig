@@ -2,6 +2,7 @@ const std = @import("std");
 const math = std.math;
 const vec3 = @import("vec3.zig");
 const raytracer = @import("raytracer.zig");
+const infinity = math.inf(f64);
 
 pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
@@ -19,6 +20,8 @@ pub fn main() !void {
     var image_height: u32 = @intFromFloat(image_height_f);
     image_height = if (image_height < 1) 1 else image_height;
     image_height_f = @as(f64, @floatFromInt(image_height));
+
+    const world = [_]raytracer.Hittable{ raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, 0, -1), 0.5) }, raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, -100.5, -1), 100) } };
 
     const focal_length: f64 = 1.0;
     const viewport_height: f64 = 2.0;
@@ -51,7 +54,7 @@ pub fn main() !void {
             var ray_direction = pixel_center.sub(camera_center);
             var r = raytracer.Ray.init(camera_center, ray_direction);
 
-            var pixel_color = rayColor(r);
+            var pixel_color = rayColor(r, world[0..world.len]);
 
             try stdout.print("{}", .{pixel_color});
         }
@@ -63,33 +66,12 @@ pub fn main() !void {
     try bw.flush(); // don't forget to flush!
 }
 
-fn hitSphere(center: vec3.Point3, radius: f64, r: raytracer.Ray) f64 {
-    const oc = r.origin.sub(center);
-    const a = r.direction.lengthSquared();
-    const half_b = oc.dot(r.direction);
-    const c = oc.lengthSquared() - radius * radius;
-    const discriminant = half_b * half_b - a * c;
-
-    if (discriminant < 0.0) {
-        return -1.0;
-    } else {
-        return (-half_b - @sqrt(discriminant)) / a;
-    }
-}
-
-fn rayColor(r: raytracer.Ray) vec3.Color {
-    const t = hitSphere(vec3.Point3.init(0, 0, -1), 0.5, r);
-
-    if (t > 0.0) {
-        const normal = r.at(t)
-            .sub(vec3.Vec3.init(0.0, 0.0, -1.0))
-            .unitVector();
-        const result = normal.add(vec3.Color.init(1, 1, 1)).scale(0.5);
-        return vec3.Color.init(
-            math.clamp(result.x, 0.0, 1.0),
-            math.clamp(result.y, 0.0, 1.0),
-            math.clamp(result.z, 0.0, 1.0),
-        );
+fn rayColor(r: raytracer.Ray, world: []const raytracer.Hittable) vec3.Color {
+    if (raytracer.hitTestAgainstList(world, r, 0, infinity)) |hit_record| {
+        return hit_record
+            .normal
+            .add(vec3.Color.init(1, 1, 1))
+            .scale(0.5);
     }
 
     var unit_direction = r.direction.unitVector();

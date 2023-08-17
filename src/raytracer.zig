@@ -22,15 +22,56 @@ pub const HitRecord = struct {
     p: Point3,
     normal: Vec3,
     t: f64,
+    front_face: bool,
 
-    pub fn init(p: Point3, normal: Vec3, t: f64) HitRecord {
+    pub fn init(p: Point3, outward_normal: Vec3, t: f64, ray: Ray) HitRecord {
+        var front_face = (ray.direction.dot(outward_normal) < 0.0);
         return HitRecord{
             .p = p,
-            .normal = normal,
+            .normal = if (front_face) outward_normal else outward_normal.neg(),
             .t = t,
+            .front_face = front_face,
         };
     }
 };
+
+pub const Hittable = union(enum) {
+    sphere: Sphere,
+
+    fn hitTest(
+        self: Hittable,
+        r: Ray,
+        ray_tmin: f64,
+        ray_tmax: f64,
+    ) ?HitRecord {
+        return switch (self) {
+            .sphere => |s| s.hitTest(r, ray_tmin, ray_tmax),
+        };
+    }
+};
+
+pub fn hitTestAgainstList(
+    hittable_list: []const Hittable,
+    r: Ray,
+    ray_tmin: f64,
+    ray_tmax: f64,
+) ?HitRecord {
+    var hit_record: ?HitRecord = null;
+    var closest = ray_tmax;
+
+    for (hittable_list) |object| {
+        if (object.hitTest(r, ray_tmin, ray_tmax)) |rec| {
+            if (closest <= rec.t) {
+                continue;
+            }
+
+            hit_record = rec;
+            closest = rec.t;
+        }
+    }
+
+    return hit_record;
+}
 
 pub const Sphere = struct {
     center: Point3,
@@ -62,20 +103,16 @@ pub const Sphere = struct {
         const sqrtd = @sqrt(discriminant);
         var root = (-half_b - sqrtd) / a;
 
-        if ((root <= ray_tmin) || (ray_tmax <= root)) {
+        if (root <= ray_tmin or ray_tmax <= root) {
             root = (-half_b + sqrtd) / a;
 
-            if ((root <= ray_tmin) || (ray_tmax <= root)) {
+            if (root <= ray_tmin or ray_tmax <= root) {
                 return null;
             }
         }
 
         const p = r.at(root);
 
-        return HitRecord.init(
-            p,
-            p.sub(self.center) - self.radius,
-            root,
-        );
+        return HitRecord.init(p, p.sub(self.center).scale(1 / self.radius), root, r);
     }
 };
