@@ -1,6 +1,33 @@
 const vec3 = @import("vec3.zig");
+const math = @import("std").math;
 const Point3 = vec3.Point3;
 const Vec3 = vec3.Vec3;
+
+pub const Interval = struct {
+    min: f64 = math.inf(f64),
+    max: f64 = -math.inf(f64),
+
+    pub const empty = Interval{};
+    pub const universe = Interval{
+        .min = -math.inf(f64),
+        .max = math.inf(f64),
+    };
+
+    pub fn init(min: f64, max: f64) Interval {
+        return Interval{
+            .min = min,
+            .max = max,
+        };
+    }
+
+    pub fn contains(self: Interval, x: f64) bool {
+        return self.min <= x and x <= self.max;
+    }
+
+    pub fn surrounds(self: Interval, x: f64) bool {
+        return self.min < x and x < self.max;
+    }
+};
 
 pub const Ray = struct {
     origin: vec3.Point3,
@@ -41,11 +68,10 @@ pub const Hittable = union(enum) {
     fn hitTest(
         self: Hittable,
         r: Ray,
-        ray_tmin: f64,
-        ray_tmax: f64,
+        ray_t: Interval,
     ) ?HitRecord {
         return switch (self) {
-            .sphere => |s| s.hitTest(r, ray_tmin, ray_tmax),
+            .sphere => |s| s.hitTest(r, ray_t),
         };
     }
 };
@@ -53,14 +79,16 @@ pub const Hittable = union(enum) {
 pub fn hitTestAgainstList(
     hittable_list: []const Hittable,
     r: Ray,
-    ray_tmin: f64,
-    ray_tmax: f64,
+    ray_t: Interval,
 ) ?HitRecord {
     var hit_record: ?HitRecord = null;
-    var closest = ray_tmax;
+    var closest = ray_t.max;
 
     for (hittable_list) |object| {
-        if (object.hitTest(r, ray_tmin, ray_tmax)) |rec| {
+        if (object.hitTest(
+            r,
+            Interval.init(ray_t.min, closest),
+        )) |rec| {
             if (closest <= rec.t) {
                 continue;
             }
@@ -87,8 +115,7 @@ pub const Sphere = struct {
     fn hitTest(
         self: Sphere,
         r: Ray,
-        ray_tmin: f64,
-        ray_tmax: f64,
+        ray_t: Interval,
     ) ?HitRecord {
         const oc = r.origin.sub(self.center);
         const a = r.direction.lengthSquared();
@@ -103,10 +130,10 @@ pub const Sphere = struct {
         const sqrtd = @sqrt(discriminant);
         var root = (-half_b - sqrtd) / a;
 
-        if (root <= ray_tmin or ray_tmax <= root) {
+        if (!ray_t.surrounds(root)) {
             root = (-half_b + sqrtd) / a;
 
-            if (root <= ray_tmin or ray_tmax <= root) {
+            if (!ray_t.surrounds(root)) {
                 return null;
             }
         }

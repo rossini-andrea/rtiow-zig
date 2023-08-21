@@ -67,7 +67,11 @@ pub fn main() !void {
 }
 
 fn rayColor(r: raytracer.Ray, world: []const raytracer.Hittable) vec3.Color {
-    if (raytracer.hitTestAgainstList(world, r, 0, infinity)) |hit_record| {
+    if (raytracer.hitTestAgainstList(
+        world,
+        r,
+        raytracer.Interval.init(0, infinity),
+    )) |hit_record| {
         return hit_record
             .normal
             .add(vec3.Color.init(1, 1, 1))
@@ -76,5 +80,9 @@ fn rayColor(r: raytracer.Ray, world: []const raytracer.Hittable) vec3.Color {
 
     var unit_direction = r.direction.unitVector();
     var alpha = math.clamp(0.5 * (unit_direction.y + 1.0), 0.0, 1.0);
-    return vec3.Color.init(1.0, 1.0, 1.0).scale(1.0 - alpha).add(vec3.Color.init(0.5, 0.7, 1.0).scale(alpha));
+    return vec3.Color
+        .init(1.0, 1.0, 1.0)
+        .scale(1.0 - alpha)
+        .add(vec3.Color.init(0.5, 0.7, 1.0)
+        .scale(alpha));
 }
