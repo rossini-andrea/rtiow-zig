@@ -89,7 +89,14 @@ pub const Vec3 = struct {
     ) !void {
         _ = fmt;
         _ = options;
-        try writer.print("{} {} {}\n", .{ @as(u8, @intFromFloat(255.999 * self.x)), @as(u8, @intFromFloat(255.999 * self.y)), @as(u8, @intFromFloat(255.999 * self.z)) });
+        try writer.print(
+            "{} {} {}\n",
+            .{
+                @as(u8, @intFromFloat(255.999 * self.x)),
+                @as(u8, @intFromFloat(255.999 * self.y)),
+                @as(u8, @intFromFloat(255.999 * self.z)),
+            },
+        );
     }
 };
 

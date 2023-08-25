@@ -8,9 +8,17 @@ const Camera = @import("camera.zig").Camera;
 
 pub fn main() !void {
     const aspect_ratio = 16.0 / 9.0;
-    var image_width: u32 = 400;
-    const world = [_]raytracer.Hittable{ raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, 0, -1), 0.5) }, raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, -100.5, -1), 100) } };
-    const camera = Camera.init(aspect_ratio, image_width);
+    const image_width: u32 = 400;
+    const samples_per_pixel = 100;
+    const world = [_]raytracer.Hittable{
+        raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, 0, -1), 0.5) },
+        raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, -100.5, -1), 100) },
+    };
+    const camera = Camera.init(
+        aspect_ratio,
+        image_width,
+        samples_per_pixel,
+    );
     try camera.render(&world);
 
     try stdout.context.flush(); // don't forget to flush!

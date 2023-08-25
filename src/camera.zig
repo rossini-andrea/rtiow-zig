@@ -1,11 +1,14 @@
 const vec3 = @import("vec3.zig");
 const raytracer = @import("raytracer.zig");
 const math = @import("std").math;
+const random = @import("random.zig");
 const stdout = @import("stdio.zig").stdout;
 const stdlog = @import("stdio.zig").stdlog;
+const Interval = @import("interval.zig").Interval;
 
 pub const Camera = struct {
     aspect_ratio: f64,
+    samples_per_pixel: u32,
     image_width: u32,
     image_height: u32,
     image_width_f: f64,
@@ -18,6 +21,7 @@ pub const Camera = struct {
     pub fn init(
         aspect_ratio: f64,
         image_width: u32,
+        samples_per_pixel: u32,
     ) Camera {
         var image_width_f = @as(f64, @floatFromInt(image_width));
         var image_height_f = image_width_f / aspect_ratio;
@@ -45,6 +49,7 @@ pub const Camera = struct {
 
         return Camera{
             .aspect_ratio = aspect_ratio,
+            .samples_per_pixel = samples_per_pixel,
             .image_width = image_width,
             .image_height = image_height,
             .image_width_f = image_width_f,
@@ -67,13 +72,21 @@ pub const Camera = struct {
 
             for (0..self.image_width) |x| {
                 const x_f = @as(f64, @floatFromInt(x));
-                var pixel_center = self.pixel00_loc
-                    .add(self.pixel_delta_u.scale(x_f))
-                    .add(self.pixel_delta_v.scale(y_f));
-                var ray_direction = pixel_center.sub(self.center);
-                var r = raytracer.Ray.init(self.center, ray_direction);
+                var pixel_color = vec3.Color.init(0, 0, 0);
 
-                var pixel_color = rayColor(r, world[0..world.len]);
+                for (0..self.samples_per_pixel) |_| {
+                    const r = self.getRay(x_f, y_f);
+                    pixel_color = pixel_color.add(rayColor(r, world[0..world.len]));
+                }
+
+                pixel_color = pixel_color
+                    .fraction(@as(f64, @floatFromInt(
+                    self.samples_per_pixel,
+                )));
+                const intensity = Interval.init(0, 0.999);
+                pixel_color.x = intensity.clamp(pixel_color.x);
+                pixel_color.y = intensity.clamp(pixel_color.y);
+                pixel_color.z = intensity.clamp(pixel_color.z);
 
                 try stdout.print("{}", .{pixel_color});
             }
@@ -83,11 +96,29 @@ pub const Camera = struct {
         }
     }
 
+    fn getRay(self: Camera, x: f64, y: f64) raytracer.Ray {
+        const pixel_center = self
+            .pixel00_loc
+            .add(self.pixel_delta_u.scale(x))
+            .add(self.pixel_delta_v.scale(y));
+        const pixel_sample = pixel_center
+            .add(self.pixelSampleSquare());
+        const ray_direction = pixel_sample.sub(self.center);
+        return raytracer.Ray.init(self.center, ray_direction);
+    }
+
+    fn pixelSampleSquare(self: Camera) vec3.Vec3 {
+        const px = random.rand() - 0.5;
+        const py = random.rand() - 0.5;
+        return self.pixel_delta_u.scale(px)
+            .add(self.pixel_delta_v.scale(py));
+    }
+
     fn rayColor(r: raytracer.Ray, world: []const raytracer.Hittable) vec3.Color {
         if (raytracer.hitTestAgainstList(
             world,
             r,
-            raytracer.Interval.init(0, math.inf(f64)),
+            Interval.init(0, math.inf(f64)),
         )) |hit_record| {
             return hit_record
                 .normal
