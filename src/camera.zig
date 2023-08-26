@@ -5,6 +5,9 @@ const random = @import("random.zig");
 const stdout = @import("stdio.zig").stdout;
 const stdlog = @import("stdio.zig").stdlog;
 const Interval = @import("interval.zig").Interval;
+const Ray = raytracer.Ray;
+const Vec3 = vec3.Vec3;
+const Color = vec3.Color;
 
 pub const Camera = struct {
     aspect_ratio: f64,
@@ -15,8 +18,8 @@ pub const Camera = struct {
     image_height_f: f64,
     center: vec3.Point3,
     pixel00_loc: vec3.Point3,
-    pixel_delta_u: vec3.Vec3,
-    pixel_delta_v: vec3.Vec3,
+    pixel_delta_u: Vec3,
+    pixel_delta_v: Vec3,
 
     pub fn init(
         aspect_ratio: f64,
@@ -41,7 +44,7 @@ pub const Camera = struct {
         var pixel_delta_v = viewport_v.fraction(image_height_f);
 
         var viewport_upper_left = camera_center
-            .sub(vec3.Vec3.init(0, 0, focal_length))
+            .sub(Vec3.init(0, 0, focal_length))
             .sub(viewport_u.scale(0.5))
             .sub(viewport_v.scale(0.5));
         var pixel00_loc = viewport_upper_left
@@ -107,23 +110,29 @@ pub const Camera = struct {
         return raytracer.Ray.init(self.center, ray_direction);
     }
 
-    fn pixelSampleSquare(self: Camera) vec3.Vec3 {
+    fn pixelSampleSquare(self: Camera) Vec3 {
         const px = random.rand() - 0.5;
         const py = random.rand() - 0.5;
         return self.pixel_delta_u.scale(px)
             .add(self.pixel_delta_v.scale(py));
     }
 
-    fn rayColor(r: raytracer.Ray, world: []const raytracer.Hittable) vec3.Color {
+    fn rayColor(
+        r: raytracer.Ray,
+        world: []const raytracer.Hittable,
+    ) vec3.Color {
         if (raytracer.hitTestAgainstList(
             world,
             r,
             Interval.init(0, math.inf(f64)),
         )) |hit_record| {
-            return hit_record
-                .normal
-                .add(vec3.Color.init(1, 1, 1))
-                .scale(0.5);
+            const diffuse_direction = Vec3.initRandomOnHemisphere(
+                hit_record.normal,
+            );
+            return rayColor(
+                Ray.init(hit_record.p, diffuse_direction),
+                world,
+            ).scale(0.5);
         }
 
         var unit_direction = r.direction.unitVector();

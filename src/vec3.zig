@@ -1,4 +1,5 @@
 const std = @import("std");
+const random = @import("random.zig");
 
 pub const Vec3 = struct {
     x: f64,
@@ -11,6 +12,45 @@ pub const Vec3 = struct {
             .y = y,
             .z = z,
         };
+    }
+
+    pub fn initRandom() Vec3 {
+        return Vec3{
+            .x = random.rand(),
+            .y = random.rand(),
+            .z = random.rand(),
+        };
+    }
+
+    pub fn initRandomRanged(min: f64, max: f64) Vec3 {
+        return Vec3{
+            .x = random.ranged(min, max),
+            .y = random.ranged(min, max),
+            .z = random.ranged(min, max),
+        };
+    }
+
+    pub fn initRandomInSphere() Vec3 {
+        while (true) {
+            const v = initRandomRanged(-1, 1);
+
+            if (v.lengthSquared() <= 1)
+                return v;
+        }
+    }
+
+    pub fn initRandomUnit() Vec3 {
+        return initRandomInSphere().unitVector();
+    }
+
+    pub fn initRandomOnHemisphere(normal: Vec3) Vec3 {
+        const v = initRandomUnit();
+
+        if (v.dot(normal) > 0) {
+            return v;
+        } else {
+            return v.neg();
+        }
     }
 
     pub fn neg(self: Vec3) Vec3 {
