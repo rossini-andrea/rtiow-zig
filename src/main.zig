@@ -14,11 +14,12 @@ pub fn main() !void {
         raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, 0, -1), 0.5) },
         raytracer.Hittable{ .sphere = raytracer.Sphere.init(vec3.Point3.init(0, -100.5, -1), 100) },
     };
-    const camera = Camera.init(
+    var camera = Camera.init(
         aspect_ratio,
         image_width,
         samples_per_pixel,
     );
+    camera.max_depth = 50;
     try camera.render(&world);
 
     try stdout.context.flush(); // don't forget to flush!

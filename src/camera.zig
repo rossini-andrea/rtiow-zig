@@ -20,6 +20,7 @@ pub const Camera = struct {
     pixel00_loc: vec3.Point3,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
+    max_depth: u32 = 10,
 
     pub fn init(
         aspect_ratio: f64,
@@ -79,7 +80,11 @@ pub const Camera = struct {
 
                 for (0..self.samples_per_pixel) |_| {
                     const r = self.getRay(x_f, y_f);
-                    pixel_color = pixel_color.add(rayColor(r, world[0..world.len]));
+                    pixel_color = pixel_color.add(rayColor(
+                        r,
+                        world[0..world.len],
+                        self.max_depth,
+                    ));
                 }
 
                 pixel_color = pixel_color
@@ -99,7 +104,7 @@ pub const Camera = struct {
         }
     }
 
-    fn getRay(self: Camera, x: f64, y: f64) raytracer.Ray {
+    fn getRay(self: Camera, x: f64, y: f64) Ray {
         const pixel_center = self
             .pixel00_loc
             .add(self.pixel_delta_u.scale(x))
@@ -118,9 +123,14 @@ pub const Camera = struct {
     }
 
     fn rayColor(
-        r: raytracer.Ray,
+        r: Ray,
         world: []const raytracer.Hittable,
+        depth: u32,
     ) vec3.Color {
+        if (depth == 0) {
+            return Color.init(0, 0, 0);
+        }
+
         if (raytracer.hitTestAgainstList(
             world,
             r,
@@ -132,6 +142,7 @@ pub const Camera = struct {
             return rayColor(
                 Ray.init(hit_record.p, diffuse_direction),
                 world,
+                depth - 1,
             ).scale(0.5);
         }
 
