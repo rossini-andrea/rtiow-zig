@@ -91,6 +91,9 @@ pub const Camera = struct {
                     .fraction(@as(f64, @floatFromInt(
                     self.samples_per_pixel,
                 )));
+
+                pixel_color = linearToGamma(pixel_color);
+
                 const intensity = Interval.init(0, 0.999);
                 pixel_color.x = intensity.clamp(pixel_color.x);
                 pixel_color.y = intensity.clamp(pixel_color.y);
@@ -102,6 +105,14 @@ pub const Camera = struct {
             try stdlog.print("\x1B[8D {d:>6.2}%", .{(y_f / (self.image_height_f - 1.0)) * 100});
             try stdlog.context.flush();
         }
+    }
+
+    fn linearToGamma(color: Color) Color {
+        return Color.init(
+            @sqrt(color.x),
+            @sqrt(color.y),
+            @sqrt(color.z),
+        );
     }
 
     fn getRay(self: Camera, x: f64, y: f64) Ray {
