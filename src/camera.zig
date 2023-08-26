@@ -136,8 +136,8 @@ pub const Camera = struct {
             r,
             Interval.init(0.001, math.inf(f64)),
         )) |hit_record| {
-            const diffuse_direction = Vec3.initRandomOnHemisphere(
-                hit_record.normal,
+            const diffuse_direction = hit_record.normal.add(
+                Vec3.initRandomUnit(),
             );
             return rayColor(
                 Ray.init(hit_record.p, diffuse_direction),
