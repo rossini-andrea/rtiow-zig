@@ -134,7 +134,7 @@ pub const Camera = struct {
         if (raytracer.hitTestAgainstList(
             world,
             r,
-            Interval.init(0, math.inf(f64)),
+            Interval.init(0.001, math.inf(f64)),
         )) |hit_record| {
             const diffuse_direction = Vec3.initRandomOnHemisphere(
                 hit_record.normal,
