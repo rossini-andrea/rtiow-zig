@@ -3,6 +3,7 @@ const Interval = @import("interval.zig").Interval;
 const math = @import("std").math;
 const Point3 = vec3.Point3;
 const Vec3 = vec3.Vec3;
+const Material = @import("material.zig").Material;
 
 pub const Ray = struct {
     origin: vec3.Point3,
@@ -25,14 +26,22 @@ pub const HitRecord = struct {
     normal: Vec3,
     t: f64,
     front_face: bool,
+    material: *const Material,
 
-    pub fn init(p: Point3, outward_normal: Vec3, t: f64, ray: Ray) HitRecord {
+    pub fn init(
+        p: Point3,
+        outward_normal: Vec3,
+        t: f64,
+        ray: Ray,
+        material: *const Material,
+    ) HitRecord {
         var front_face = (ray.direction.dot(outward_normal) < 0.0);
         return HitRecord{
             .p = p,
             .normal = if (front_face) outward_normal else outward_normal.neg(),
             .t = t,
             .front_face = front_face,
+            .material = material,
         };
     }
 };
@@ -79,11 +88,17 @@ pub fn hitTestAgainstList(
 pub const Sphere = struct {
     center: Point3,
     radius: f64,
+    material: *const Material,
 
-    pub fn init(center: Point3, radius: f64) Sphere {
+    pub fn init(
+        center: Point3,
+        radius: f64,
+        material: *const Material,
+    ) Sphere {
         return Sphere{
             .center = center,
             .radius = radius,
+            .material = material,
         };
     }
 
@@ -115,6 +130,12 @@ pub const Sphere = struct {
 
         const p = r.at(root);
 
-        return HitRecord.init(p, p.sub(self.center).scale(1 / self.radius), root, r);
+        return HitRecord.init(
+            p,
+            p.sub(self.center).scale(1 / self.radius),
+            root,
+            r,
+            self.material,
+        );
     }
 };

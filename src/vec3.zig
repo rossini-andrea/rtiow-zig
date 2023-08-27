@@ -1,5 +1,6 @@
 const std = @import("std");
 const random = @import("random.zig");
+const Interval = @import("interval.zig").Interval;
 
 pub const Vec3 = struct {
     x: f64,
@@ -119,6 +120,13 @@ pub const Vec3 = struct {
 
     pub fn unitVector(self: Vec3) Vec3 {
         return self.fraction(self.length());
+    }
+
+    pub fn isNearZero(self: Vec3) bool {
+        const e = Interval.init(-1e-8, 1e-8);
+        return (e.surrounds(self.x) and
+            e.surrounds(self.y) and
+            e.surrounds(self.z));
     }
 
     pub fn format(

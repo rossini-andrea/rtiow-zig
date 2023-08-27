@@ -147,14 +147,21 @@ pub const Camera = struct {
             r,
             Interval.init(0.001, math.inf(f64)),
         )) |hit_record| {
-            const diffuse_direction = hit_record.normal.add(
-                Vec3.initRandomUnit(),
-            );
-            return rayColor(
-                Ray.init(hit_record.p, diffuse_direction),
-                world,
-                depth - 1,
-            ).scale(0.5);
+            if (hit_record.material.scatter(
+                hit_record.material,
+                &r,
+                &hit_record,
+            )) |scatter| {
+                return scatter
+                    .attenuation
+                    .product(rayColor(
+                    scatter.ray,
+                    world,
+                    depth - 1,
+                ));
+            }
+
+            return Color.init(0, 0, 0);
         }
 
         var unit_direction = r.direction.unitVector();
