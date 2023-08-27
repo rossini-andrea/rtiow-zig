@@ -27,6 +27,13 @@ pub const Material = struct {
             .albedo = albedo,
         };
     }
+
+    pub fn initMetal(albedo: Color) Self {
+        return Self{
+            .scatter = metalScatter,
+            .albedo = albedo,
+        };
+    }
 };
 
 fn lambertianScatter(
@@ -46,6 +53,24 @@ fn lambertianScatter(
         .ray = Ray.init(
             hit_record.p,
             diffuse_direction,
+        ),
+        .attenuation = self.albedo,
+    };
+}
+
+fn metalScatter(
+    self: *const Material,
+    ray: *const Ray,
+    hit_record: *const HitRecord,
+) ?ScatterResult {
+    var reflect_direction = ray.direction
+        .unitVector()
+        .reflect(hit_record.normal);
+
+    return ScatterResult{
+        .ray = Ray.init(
+            hit_record.p,
+            reflect_direction,
         ),
         .attenuation = self.albedo,
     };

@@ -118,6 +118,12 @@ pub const Vec3 = struct {
         };
     }
 
+    pub fn reflect(self: Vec3, normal: Vec3) Vec3 {
+        return self.sub(normal.scale(
+            self.dot(normal) * 2,
+        ));
+    }
+
     pub fn unitVector(self: Vec3) Vec3 {
         return self.fraction(self.length());
     }
