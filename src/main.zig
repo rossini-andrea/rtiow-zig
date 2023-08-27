@@ -20,16 +20,22 @@ pub fn main() !void {
         0.3,
         0.3,
     ));
-    const material_left = Material.initMetal(Color.init(
-        0.8,
-        0.8,
-        0.8,
-    ));
-    const material_right = Material.initMetal(Color.init(
-        0.8,
-        0.6,
-        0.2,
-    ));
+    const material_left = Material.initMetal(
+        Color.init(
+            0.8,
+            0.8,
+            0.8,
+        ),
+        0.3,
+    );
+    const material_right = Material.initMetal(
+        Color.init(
+            0.8,
+            0.6,
+            0.2,
+        ),
+        1.0,
+    );
     const world = [_]raytracer.Hittable{
         raytracer.Hittable{ .sphere = Sphere.init(
             vec3.Point3.init(0, -100.5, -1),
