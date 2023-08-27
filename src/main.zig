@@ -48,6 +48,11 @@ pub fn main() !void {
             &material_left,
         ) },
         raytracer.Hittable{ .sphere = Sphere.init(
+            vec3.Point3.init(-1, 0, -1),
+            -0.4,
+            &material_left,
+        ) },
+        raytracer.Hittable{ .sphere = Sphere.init(
             vec3.Point3.init(1, 0, -1),
             0.5,
             &material_right,

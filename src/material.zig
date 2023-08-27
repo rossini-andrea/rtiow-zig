@@ -1,5 +1,8 @@
+const std = @import("std");
+const math = std.math;
 const raytracer = @import("raytracer.zig");
 const vec3 = @import("vec3.zig");
+const random = @import("random.zig");
 const Ray = raytracer.Ray;
 const HitRecord = raytracer.HitRecord;
 const Vec3 = vec3.Vec3;
@@ -112,7 +115,10 @@ fn dielectricScatter(
 
     const can_refract = refraction_ratio * sin_theta <= 1;
 
-    const direction = if (can_refract)
+    const direction = if (can_refract and !(reflectance(
+        cos_theta,
+        refraction_ratio,
+    ) > random.rand()))
         unit_direction.refract(
             hit_record.normal,
             refraction_ratio,
@@ -128,4 +134,15 @@ fn dielectricScatter(
         ),
         .attenuation = Color.init(1, 1, 1),
     };
+}
+
+fn reflectance(cosine: f64, reference: f64) f64 {
+    // Use Schlick's approximation
+    var r0 = (1 - reference) / (1 + reference);
+    r0 = r0 * r0;
+    return r0 + (1 - r0) * math.pow(
+        f64,
+        (1 - cosine),
+        5,
+    );
 }
