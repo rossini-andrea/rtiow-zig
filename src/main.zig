@@ -15,9 +15,11 @@ pub fn main() !void {
         0.8,
         0.0,
     ));
-    const material_center = Material.initDielectric(
-        1.5,
-    );
+    const material_center = Material.initLambertian(Color.init(
+        0.1,
+        0.2,
+        0.5,
+    ));
     const material_left = Material.initDielectric(
         1.5,
     );
@@ -27,7 +29,7 @@ pub fn main() !void {
             0.6,
             0.2,
         ),
-        1.0,
+        0.0,
     );
     const world = [_]raytracer.Hittable{
         raytracer.Hittable{ .sphere = Sphere.init(

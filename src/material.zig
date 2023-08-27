@@ -104,14 +104,27 @@ fn dielectricScatter(
     else
         self.refraction_index;
     const unit_direction = ray.direction.unitVector();
-    const refracted = unit_direction.refract(
-        hit_record.normal,
-        refraction_ratio,
+    const cos_theta = @min(
+        unit_direction.neg().dot(hit_record.normal),
+        1,
     );
+    const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
+
+    const can_refract = refraction_ratio * sin_theta <= 1;
+
+    const direction = if (can_refract)
+        unit_direction.refract(
+            hit_record.normal,
+            refraction_ratio,
+        )
+    else
+        unit_direction.reflect(
+            hit_record.normal,
+        );
     return ScatterResult{
         .ray = Ray.init(
             hit_record.p,
-            refracted,
+            direction,
         ),
         .attenuation = Color.init(1, 1, 1),
     };
