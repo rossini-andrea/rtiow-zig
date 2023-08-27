@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const random = @import("random.zig");
 const Interval = @import("interval.zig").Interval;
 
@@ -122,6 +123,26 @@ pub const Vec3 = struct {
         return self.sub(normal.scale(
             self.dot(normal) * 2,
         ));
+    }
+
+    pub fn refract(
+        self: Vec3,
+        normal: Vec3,
+        etai_over_etat: f64,
+    ) Vec3 {
+        const cos_theta = @min(
+            self.neg().dot(normal),
+            1.0,
+        );
+        const r_out_perp = self.add(normal.scale(
+            cos_theta,
+        )).scale(
+            etai_over_etat,
+        );
+        const r_out_parallel = normal.scale(-@sqrt(math.fabs(
+            1.0 - r_out_perp.lengthSquared(),
+        )));
+        return r_out_perp.add(r_out_parallel);
     }
 
     pub fn unitVector(self: Vec3) Vec3 {

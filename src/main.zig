@@ -15,18 +15,11 @@ pub fn main() !void {
         0.8,
         0.0,
     ));
-    const material_center = Material.initLambertian(Color.init(
-        0.7,
-        0.3,
-        0.3,
-    ));
-    const material_left = Material.initMetal(
-        Color.init(
-            0.8,
-            0.8,
-            0.8,
-        ),
-        0.3,
+    const material_center = Material.initDielectric(
+        1.5,
+    );
+    const material_left = Material.initDielectric(
+        1.5,
     );
     const material_right = Material.initMetal(
         Color.init(

@@ -19,8 +19,9 @@ pub const scatter_func = *const fn (
 pub const Material = struct {
     const Self = @This();
     scatter: scatter_func,
-    albedo: Color,
+    albedo: Color = Color.init(0, 0, 0),
     fuzziness: f64 = 0,
+    refraction_index: f64 = 0,
 
     pub fn initLambertian(albedo: Color) Self {
         return Self{
@@ -37,6 +38,13 @@ pub const Material = struct {
             .scatter = metalScatter,
             .albedo = albedo,
             .fuzziness = fuzziness,
+        };
+    }
+
+    pub fn initDielectric(refraction_index: f64) Self {
+        return Self{
+            .scatter = dielectricScatter,
+            .refraction_index = refraction_index,
         };
     }
 };
@@ -83,5 +91,28 @@ fn metalScatter(
             scattered_direction,
         ),
         .attenuation = self.albedo,
+    };
+}
+
+fn dielectricScatter(
+    self: *const Material,
+    ray: *const Ray,
+    hit_record: *const HitRecord,
+) ?ScatterResult {
+    const refraction_ratio = if (hit_record.front_face)
+        1.0 / self.refraction_index
+    else
+        self.refraction_index;
+    const unit_direction = ray.direction.unitVector();
+    const refracted = unit_direction.refract(
+        hit_record.normal,
+        refraction_ratio,
+    );
+    return ScatterResult{
+        .ray = Ray.init(
+            hit_record.p,
+            refracted,
+        ),
+        .attenuation = Color.init(1, 1, 1),
     };
 }
