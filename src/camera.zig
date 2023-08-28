@@ -10,21 +10,29 @@ const Vec3 = vec3.Vec3;
 const Color = vec3.Color;
 
 pub const Camera = struct {
+    const Self = @This();
     aspect_ratio: f64,
     samples_per_pixel: u32,
     image_width: u32,
     image_height: u32,
     image_width_f: f64,
     image_height_f: f64,
+    viewport_width: f64,
+    viewport_height: f64,
+    vfov: f64,
     center: vec3.Point3,
     pixel00_loc: vec3.Point3,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
+    //    u: Vec3,
+    //    v: Vec3,
+    //    w: Vec3,
     max_depth: u32 = 10,
 
     pub fn init(
         aspect_ratio: f64,
         image_width: u32,
+        vfov: f64,
         samples_per_pixel: u32,
     ) Camera {
         var image_width_f = @as(f64, @floatFromInt(image_width));
@@ -34,8 +42,9 @@ pub const Camera = struct {
         image_height_f = @as(f64, @floatFromInt(image_height));
 
         const focal_length: f64 = 1.0;
-        const viewport_height: f64 = 2.0;
-        var viewport_width = viewport_height * (image_width_f / image_height_f);
+        const h = math.tan(vfov / 2);
+        const viewport_height: f64 = 2.0 * h * focal_length;
+        const viewport_width = viewport_height * (image_width_f / image_height_f);
         var camera_center = vec3.Point3.init(0, 0, 0);
 
         var viewport_u = vec3.Point3.init(viewport_width, 0, 0);
@@ -58,11 +67,47 @@ pub const Camera = struct {
             .image_height = image_height,
             .image_width_f = image_width_f,
             .image_height_f = image_height_f,
+            .viewport_width = viewport_width,
+            .viewport_height = viewport_height,
+            .vfov = vfov,
             .center = camera_center,
             .pixel00_loc = pixel00_loc,
             .pixel_delta_u = pixel_delta_u,
             .pixel_delta_v = pixel_delta_v,
         };
+    }
+
+    pub fn lookAt(self: *Self, from: Vec3, at: Vec3, vup: Vec3) void {
+        const direction = from.sub(at);
+        const focal_length = direction.length();
+
+        const h = math.tan(self.vfov / 2);
+        const viewport_height: f64 = 2.0 * h * focal_length;
+        const viewport_width = viewport_height * (self.image_width_f / self.image_height_f);
+
+        const w = direction.unitVector();
+        const u = vup.cross(w).unitVector();
+        const v = w.cross(u);
+
+        const viewport_u = u.scale(viewport_width);
+        const viewport_v = v.neg().scale(viewport_height);
+
+        const pixel_delta_u = viewport_u.fraction(self.image_width_f);
+        const pixel_delta_v = viewport_v.fraction(self.image_height_f);
+
+        const viewport_upper_left = from
+            .sub(w.scale(focal_length))
+            .sub(viewport_u.scale(0.5))
+            .sub(viewport_v.scale(0.5));
+        const pixel00_loc = viewport_upper_left.add(
+            pixel_delta_u.add(pixel_delta_v).scale(0.5),
+        );
+        self.center = from;
+        self.viewport_width = viewport_width;
+        self.viewport_height = viewport_height;
+        self.pixel_delta_u = pixel_delta_u;
+        self.pixel_delta_v = pixel_delta_v;
+        self.pixel00_loc = pixel00_loc;
     }
 
     pub fn render(self: Camera, world: []const raytracer.Hittable) !void {

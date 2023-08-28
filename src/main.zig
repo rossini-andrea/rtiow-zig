@@ -8,6 +8,7 @@ const Camera = @import("camera.zig").Camera;
 const Material = @import("material.zig").Material;
 const Sphere = raytracer.Sphere;
 const Color = vec3.Color;
+const Vec3 = vec3.Vec3;
 
 pub fn main() !void {
     const material_ground = Material.initLambertian(Color.init(
@@ -65,9 +66,15 @@ pub fn main() !void {
     var camera = Camera.init(
         aspect_ratio,
         image_width,
+        math.degreesToRadians(f64, 90),
         samples_per_pixel,
     );
     camera.max_depth = 50;
+    camera.lookAt(
+        Vec3.init(-2, 2, 1),
+        Vec3.init(0, 0, -1),
+        Vec3.init(0, 1, 0),
+    );
     try camera.render(&world);
 
     try stdout.context.flush(); // don't forget to flush!
