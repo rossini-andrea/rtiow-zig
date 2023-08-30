@@ -41,6 +41,16 @@ pub const Vec3 = struct {
         }
     }
 
+    pub fn initRandomInDisk() Vec3 {
+        const a = random.ranged(0, 2 * math.pi);
+        const l = random.ranged(0, 0.999);
+        return Vec3{
+            .x = math.cos(a) * l,
+            .y = math.sin(a) * l,
+            .z = 0,
+        };
+    }
+
     pub fn initRandomUnit() Vec3 {
         return initRandomInSphere().unitVector();
     }

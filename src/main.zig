@@ -66,14 +66,16 @@ pub fn main() !void {
     var camera = Camera.init(
         aspect_ratio,
         image_width,
-        math.degreesToRadians(f64, 90),
         samples_per_pixel,
     );
     camera.max_depth = 50;
+    camera.vfov = math.degreesToRadians(f64, 20);
     camera.lookAt(
         Vec3.init(-2, 2, 1),
         Vec3.init(0, 0, -1),
         Vec3.init(0, 1, 0),
+        3.4,
+        math.degreesToRadians(f64, 10),
     );
     try camera.render(&world);
 

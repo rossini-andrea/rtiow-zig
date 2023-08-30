@@ -8,6 +8,7 @@ const Interval = @import("interval.zig").Interval;
 const Ray = raytracer.Ray;
 const Vec3 = vec3.Vec3;
 const Color = vec3.Color;
+const Point3 = vec3.Point3;
 
 pub const Camera = struct {
     const Self = @This();
@@ -24,15 +25,15 @@ pub const Camera = struct {
     pixel00_loc: vec3.Point3,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
-    //    u: Vec3,
-    //    v: Vec3,
-    //    w: Vec3,
+    defocus_disk: ?struct {
+        u: Vec3,
+        v: Vec3,
+    },
     max_depth: u32 = 10,
 
     pub fn init(
         aspect_ratio: f64,
         image_width: u32,
-        vfov: f64,
         samples_per_pixel: u32,
     ) Camera {
         var image_width_f = @as(f64, @floatFromInt(image_width));
@@ -41,24 +42,7 @@ pub const Camera = struct {
         image_height = if (image_height < 1) 1 else image_height;
         image_height_f = @as(f64, @floatFromInt(image_height));
 
-        const focal_length: f64 = 1.0;
-        const h = math.tan(vfov / 2);
-        const viewport_height: f64 = 2.0 * h * focal_length;
-        const viewport_width = viewport_height * (image_width_f / image_height_f);
-        var camera_center = vec3.Point3.init(0, 0, 0);
-
-        var viewport_u = vec3.Point3.init(viewport_width, 0, 0);
-        var viewport_v = vec3.Point3.init(0, -viewport_height, 0);
-
-        var pixel_delta_u = viewport_u.fraction(image_width_f);
-        var pixel_delta_v = viewport_v.fraction(image_height_f);
-
-        var viewport_upper_left = camera_center
-            .sub(Vec3.init(0, 0, focal_length))
-            .sub(viewport_u.scale(0.5))
-            .sub(viewport_v.scale(0.5));
-        var pixel00_loc = viewport_upper_left
-            .add(pixel_delta_u.add(pixel_delta_v).scale(0.5));
+        var camera_center = Point3.init(0, 0, 0);
 
         return Camera{
             .aspect_ratio = aspect_ratio,
@@ -67,22 +51,29 @@ pub const Camera = struct {
             .image_height = image_height,
             .image_width_f = image_width_f,
             .image_height_f = image_height_f,
-            .viewport_width = viewport_width,
-            .viewport_height = viewport_height,
-            .vfov = vfov,
+            .vfov = math.pi * 0.5,
+            .viewport_width = 2,
+            .viewport_height = 2,
             .center = camera_center,
-            .pixel00_loc = pixel00_loc,
-            .pixel_delta_u = pixel_delta_u,
-            .pixel_delta_v = pixel_delta_v,
+            .pixel00_loc = Point3.init(0.5, 0.5, -1),
+            .pixel_delta_u = Vec3.init(2, 0, 0),
+            .pixel_delta_v = Vec3.init(0, 2, 0),
+            .defocus_disk = null,
         };
     }
 
-    pub fn lookAt(self: *Self, from: Vec3, at: Vec3, vup: Vec3) void {
+    pub fn lookAt(
+        self: *Self,
+        from: Vec3,
+        at: Vec3,
+        vup: Vec3,
+        focus_distance: f64,
+        defocus_angle: f64,
+    ) void {
         const direction = from.sub(at);
-        const focal_length = direction.length();
 
         const h = math.tan(self.vfov / 2);
-        const viewport_height: f64 = 2.0 * h * focal_length;
+        const viewport_height = 2.0 * h * focus_distance;
         const viewport_width = viewport_height * (self.image_width_f / self.image_height_f);
 
         const w = direction.unitVector();
@@ -90,24 +81,49 @@ pub const Camera = struct {
         const v = w.cross(u);
 
         const viewport_u = u.scale(viewport_width);
-        const viewport_v = v.neg().scale(viewport_height);
+        const viewport_v = v.scale(-viewport_height);
 
         const pixel_delta_u = viewport_u.fraction(self.image_width_f);
         const pixel_delta_v = viewport_v.fraction(self.image_height_f);
 
         const viewport_upper_left = from
-            .sub(w.scale(focal_length))
+            .sub(w.scale(focus_distance))
             .sub(viewport_u.scale(0.5))
             .sub(viewport_v.scale(0.5));
         const pixel00_loc = viewport_upper_left.add(
             pixel_delta_u.add(pixel_delta_v).scale(0.5),
         );
+
+        if (defocus_angle > 0) {
+            const defocus_radius = focus_distance *
+                math.tan(defocus_angle * 0.5);
+            const defocus_disk_u = u.scale(defocus_radius);
+            const defocus_disk_v = v.scale(defocus_radius);
+            self.defocus_disk = .{
+                .u = defocus_disk_u,
+                .v = defocus_disk_v,
+            };
+        } else {
+            self.defocus_disk = null;
+        }
+
         self.center = from;
         self.viewport_width = viewport_width;
         self.viewport_height = viewport_height;
         self.pixel_delta_u = pixel_delta_u;
         self.pixel_delta_v = pixel_delta_v;
         self.pixel00_loc = pixel00_loc;
+    }
+
+    pub fn defocusDiskSample(self: Camera) Point3 {
+        if (self.defocus_disk) |disk| {
+            const p = Point3.initRandomInDisk();
+            return self.center
+                .add(disk.u.scale(p.x))
+                .add(disk.v.scale(p.y));
+        }
+
+        return self.center;
     }
 
     pub fn render(self: Camera, world: []const raytracer.Hittable) !void {
@@ -167,8 +183,10 @@ pub const Camera = struct {
             .add(self.pixel_delta_v.scale(y));
         const pixel_sample = pixel_center
             .add(self.pixelSampleSquare());
-        const ray_direction = pixel_sample.sub(self.center);
-        return raytracer.Ray.init(self.center, ray_direction);
+        const origin =
+            self.defocusDiskSample();
+        const ray_direction = pixel_sample.sub(origin);
+        return raytracer.Ray.init(origin, ray_direction);
     }
 
     fn pixelSampleSquare(self: Camera) Vec3 {
