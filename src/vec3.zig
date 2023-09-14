@@ -1,12 +1,33 @@
 const std = @import("std");
 const math = std.math;
+const json = std.json;
+const Allocator = std.mem.Allocator;
 const random = @import("random.zig");
 const Interval = @import("interval.zig").Interval;
 
 pub const Vec3 = struct {
+    const Self = @This();
     x: f64,
     y: f64,
     z: f64,
+
+    pub fn jsonParse(
+        allocator: Allocator,
+        source: anytype,
+        options: json.ParseOptions,
+    ) json.ParseError(@TypeOf(source.*))!Self {
+        const data = try json.innerParse(
+            [3]f64,
+            allocator,
+            source,
+            options,
+        );
+        return Self.init(
+            data[0],
+            data[1],
+            data[2],
+        );
+    }
 
     pub fn init(x: f64, y: f64, z: f64) Vec3 {
         return Vec3{

@@ -1,5 +1,7 @@
 const std = @import("std");
 const math = std.math;
+const json = std.json;
+const Allocator = std.mem.Allocator;
 const raytracer = @import("raytracer.zig");
 const vec3 = @import("vec3.zig");
 const random = @import("random.zig");
@@ -19,12 +21,44 @@ pub const scatter_func = *const fn (
     hit_record: *const HitRecord,
 ) ?ScatterResult;
 
+pub const MaterialInitData = struct {
+    function: []const u8,
+    albedo: Color = Color.init(0, 0, 0),
+    fuzziness: f64 = 0,
+    refraction_index: f64 = 0,
+};
+
+pub const MaterialError = error{
+    InvalidFunction,
+};
+
 pub const Material = struct {
     const Self = @This();
     scatter: scatter_func,
     albedo: Color = Color.init(0, 0, 0),
     fuzziness: f64 = 0,
     refraction_index: f64 = 0,
+
+    pub fn initFromData(data: MaterialInitData) !Self {
+        if (std.mem.eql(u8, data.function, "lambertian")) {
+            return Self.initLambertian(
+                data.albedo,
+            );
+        }
+
+        if (std.mem.eql(u8, data.function, "metal")) {
+            return Self.initMetal(
+                data.albedo,
+                data.fuzziness,
+            );
+        }
+
+        if (std.mem.eql(u8, data.function, "dielectric")) {
+            return Self.initDielectric(data.refraction_index);
+        }
+
+        return MaterialError.InvalidFunction;
+    }
 
     pub fn initLambertian(albedo: Color) Self {
         return Self{

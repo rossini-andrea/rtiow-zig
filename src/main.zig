@@ -5,12 +5,17 @@ const math = std.math;
 const vec3 = @import("vec3.zig");
 const raytracer = @import("raytracer.zig");
 const infinity = math.inf(f64);
+const Scene = @import("scene.zig").Scene;
 const Camera = @import("camera.zig").Camera;
 const Material = @import("material.zig").Material;
 const Sphere = raytracer.Sphere;
 const Color = vec3.Color;
 const Vec3 = vec3.Vec3;
 const Point3 = vec3.Point3;
+
+test {
+    _ = @import("scene.zig");
+}
 
 pub fn main() !void {
     const material_ground = Material.initLambertian(Color.init(
