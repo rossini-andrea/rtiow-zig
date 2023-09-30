@@ -1,0 +1,64 @@
+{
+    "camera": {
+        "aspect_ratio": 1.333333,
+        "image_width": 640,
+        "samples_per_pixel": 500,
+        "max_depth": 50,
+        "vfov": 45,
+        "lookat": {
+            "from": [0, 0, 1.77],
+            "at": [0, 5.5, 1.77],
+            "vup": [0.0, 0.0, 1.0],
+            "focus_distance": 10,
+            "defocus_angle": 0.6
+        }
+    },
+    "materials": {
+        "sandstone": {
+            "function": "lambertian",
+            "albedo": [0.8, 0.8, 0.4]
+        },
+        "bluemarble": {
+            "function": "metal",
+            "albedo": [0.0, 0.1, 1.0],
+            "fuzziness": 0.05
+        },
+        "greenmarble": {
+            "function": "metal",
+            "albedo": [0.0, 0.8, 0.1],
+            "fuzziness": 0.05
+        },
+        "chrome": {
+            "function": "metal",
+            "albedo": [0.8, 0.8, 0.8],
+            "fuzziness": 0.01
+        },
+        "floor": {
+            "function": "lambertian",
+            "albedo": [0.5, 0.5, 0.5]
+        }
+    },
+    "shapes": [
+        {
+            "material": "bluemarble",
+            "sphere": {
+                "radius": 0.5,
+                "center": [1.0, 3.0, 0.5]
+            }
+        },
+        {
+            "material": "greenmarble",
+            "sphere": {
+                "radius": 0.5,
+                "center": [-1.0, 3.5, 0.5]
+            }
+        },
+        {
+            "material": "chrome",
+            "sphere": {
+                "radius": 1.0,
+                "center": [0.0, 6.0, 1]
+            }
+        }
+    ]
+}

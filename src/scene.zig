@@ -43,21 +43,14 @@ pub const Scene = struct {
     materials: MaterialMap,
     shapes: []const raytracer.Hittable,
 
-    pub fn initFromJson(
+    pub fn initFromData(
         allocator: Allocator,
-        json_data: []const u8,
+        init_data: SceneInitData,
     ) !Self {
-        var init_data = try json.parseFromSlice(
-            SceneInitData,
-            allocator,
-            json_data,
-            .{},
-        );
-        defer init_data.deinit();
         var materials = MaterialMap.init(allocator);
         errdefer materials.deinit();
 
-        var iter = init_data.value.materials.map.iterator();
+        var iter = init_data.materials.map.iterator();
 
         while (iter.next()) |m| {
             try materials.put(
@@ -68,11 +61,11 @@ pub const Scene = struct {
 
         var shapes = try allocator.alloc(
             raytracer.Hittable,
-            init_data.value.shapes.len,
+            init_data.shapes.len,
         );
         errdefer allocator.free(shapes);
 
-        for (init_data.value.shapes, shapes) |shape, *dest_shape| {
+        for (init_data.shapes, shapes) |shape, *dest_shape| {
             if (materials.getPtr(shape.material)) |material_ptr| {
                 if (shape.sphere) |sphere| {
                     dest_shape.* = Hittable{
@@ -90,7 +83,7 @@ pub const Scene = struct {
             }
         }
 
-        const scene_camera = if (init_data.value.camera) |init_data_camera|
+        const scene_camera = if (init_data.camera) |init_data_camera|
             Camera.initFromData(init_data_camera)
         else
             Camera.init(
@@ -114,7 +107,7 @@ pub const Scene = struct {
 };
 
 test "loads a scene from json" {
-    const data =
+    const json_data =
         \\ {
         \\    "materials": {
         \\      "foo": {
@@ -134,9 +127,16 @@ test "loads a scene from json" {
         \\ }
     ;
 
-    var scene = try Scene.initFromJson(
+    var init_data = try json.parseFromSlice(
+        SceneInitData,
         std.testing.allocator,
-        data,
+        json_data,
+        .{},
+    );
+    defer init_data.deinit();
+    var scene = try Scene.initFromData(
+        std.testing.allocator,
+        init_data.value,
     );
     defer scene.deinit();
     try std.testing.expect(scene.shapes.len == 1);
