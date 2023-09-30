@@ -10,6 +10,21 @@ const Vec3 = vec3.Vec3;
 const Color = vec3.Color;
 const Point3 = vec3.Point3;
 
+pub const CameraInitData = struct {
+    aspect_ratio: f64,
+    image_width: u32,
+    samples_per_pixel: u32 = 100,
+    max_depth: u32 = 10,
+    vfov: f64 = 90,
+    lookat: ?struct {
+        from: vec3.Point3,
+        at: vec3.Point3,
+        vup: vec3.Vec3,
+        focus_distance: f64,
+        defocus_angle: f64 = 0.6,
+    },
+};
+
 pub const Camera = struct {
     const Self = @This();
     aspect_ratio: f64,
@@ -31,11 +46,33 @@ pub const Camera = struct {
     },
     max_depth: u32 = 10,
 
+    pub fn initFromData(data: CameraInitData) Self {
+        var cam = Self.init(
+            data.aspect_ratio,
+            data.image_width,
+            data.samples_per_pixel,
+        );
+        cam.max_depth = data.max_depth;
+        cam.vfov = math.degreesToRadians(f64, data.vfov);
+
+        if (data.lookat) |lookat| {
+            cam.lookAt(
+                lookat.from,
+                lookat.at,
+                lookat.vup,
+                lookat.focus_distance,
+                math.degreesToRadians(f64, lookat.defocus_angle),
+            );
+        }
+
+        return cam;
+    }
+
     pub fn init(
         aspect_ratio: f64,
         image_width: u32,
         samples_per_pixel: u32,
-    ) Camera {
+    ) Self {
         var image_width_f = @as(f64, @floatFromInt(image_width));
         var image_height_f = image_width_f / aspect_ratio;
         var image_height: u32 = @intFromFloat(image_height_f);

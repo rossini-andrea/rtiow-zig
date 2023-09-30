@@ -2,6 +2,9 @@ const std = @import("std");
 const material = @import("material.zig");
 const raytracer = @import("raytracer.zig");
 const vec3 = @import("vec3.zig");
+const camera = @import("camera.zig");
+const Camera = camera.Camera;
+const CameraInitData = camera.CameraInitData;
 const json = std.json;
 const Allocator = std.mem.Allocator;
 const Material = material.Material;
@@ -26,6 +29,7 @@ pub const SceneInitData = struct {
     const Self = @This();
     const MaterialMap = json.ArrayHashMap(MaterialInitData);
 
+    camera: ?CameraInitData = null,
     materials: MaterialMap,
     shapes: []const ShapeInitData,
 };
@@ -35,6 +39,7 @@ pub const Scene = struct {
     const MaterialMap = std.StringHashMap(Material);
 
     allocator: Allocator,
+    camera: Camera,
     materials: MaterialMap,
     shapes: []const raytracer.Hittable,
 
@@ -85,7 +90,17 @@ pub const Scene = struct {
             }
         }
 
+        const scene_camera = if (init_data.value.camera) |init_data_camera|
+            Camera.initFromData(init_data_camera)
+        else
+            Camera.init(
+                16 / 9,
+                1200,
+                100,
+            );
+
         return Self{
+            .camera = scene_camera,
             .allocator = allocator,
             .materials = materials,
             .shapes = shapes,
@@ -125,4 +140,5 @@ test "loads a scene from json" {
     );
     defer scene.deinit();
     try std.testing.expect(scene.shapes.len == 1);
+    try std.testing.expect(scene.shapes[0].sphere.material.albedo.x == 1.0);
 }
