@@ -3,9 +3,14 @@ const material = @import("material.zig");
 const raytracer = @import("raytracer.zig");
 const vec3 = @import("vec3.zig");
 const camera = @import("camera.zig");
+const random = @import("random.zig");
+const Color = vec3.Color;
+const Point3 = vec3.Point3;
+const Vec3 = vec3.Vec3;
 const Camera = camera.Camera;
 const CameraInitData = camera.CameraInitData;
 const json = std.json;
+const math = std.math;
 const Allocator = std.mem.Allocator;
 const Material = material.Material;
 const MaterialInitData = material.MaterialInitData;
@@ -42,6 +47,165 @@ pub const Scene = struct {
     camera: Camera,
     materials: MaterialMap,
     shapes: []const raytracer.Hittable,
+
+    pub fn initFinalRender(allocator: Allocator) !Self {
+        var materialcache = MaterialMap.init(allocator);
+        errdefer materialcache.deinit();
+
+        try materialcache.ensureTotalCapacity(22 * 22 + 4);
+        materialcache.putAssumeCapacity(
+            "material_ground",
+            Material.initLambertian(
+                Color.init(
+                    0.5,
+                    0.5,
+                    0.5,
+                ),
+            ),
+        );
+        materialcache.putAssumeCapacity(
+            "material1",
+            Material.initDielectric(1.5),
+        );
+        materialcache.putAssumeCapacity(
+            "material2",
+            Material.initLambertian(Color.init(
+                0.4,
+                0.2,
+                0.1,
+            )),
+        );
+        materialcache.putAssumeCapacity(
+            "material3",
+            Material.initMetal(
+                Color.init(
+                    0.7,
+                    0.6,
+                    0.5,
+                ),
+                0.0,
+            ),
+        );
+        var world = try allocator.alloc(raytracer.Hittable, 22 * 22 + 4);
+        errdefer allocator.free(world);
+        var idx: usize = 0;
+
+        var a: i32 = -11;
+        while (a < 11) : (a += 1) {
+            var b: i32 = -11;
+
+            while (b < 11) : (b += 1) {
+                const center = Point3.init(
+                    @as(f64, @floatFromInt(a)) +
+                        0.9 * random.rand(),
+                    0.2,
+                    @as(f64, @floatFromInt(b)) +
+                        0.9 * random.rand(),
+                );
+
+                if (center.sub(Point3.init(4, 0.2, 0)).length() > 0.9) {
+                    const choose_mat = random.rand();
+                    var random_material: Material = undefined;
+
+                    if (choose_mat < 0.8) {
+                        const albedo = Color.product(
+                            Color.initRandom(),
+                            Color.initRandom(),
+                        );
+                        random_material = Material.initLambertian(albedo);
+                    } else if (choose_mat < 0.95) {
+                        const albedo = Color.initRandomRanged(0.5, 1);
+                        const fuzz = random.ranged(0, 0.5);
+                        random_material = Material.initMetal(
+                            albedo,
+                            fuzz,
+                        );
+                    } else {
+                        random_material = Material.initDielectric(1.5);
+                    }
+
+                    materialcache.putAssumeCapacity(
+                        std.mem.asBytes(&idx),
+                        random_material,
+                    );
+
+                    world[idx] = raytracer.Hittable{
+                        .sphere = Sphere.init(
+                            center,
+                            0.2,
+                            if (materialcache.getPtr(
+                                std.mem.asBytes(&idx),
+                            )) |ptr| ptr else unreachable,
+                        ),
+                    };
+                    idx = idx + 1;
+                }
+            }
+        }
+
+        world[idx] = raytracer.Hittable{
+            .sphere = Sphere.init(
+                Point3.init(0, -1000, 0),
+                1000,
+                if (materialcache.getPtr(
+                    "material_ground",
+                )) |ptr| ptr else unreachable,
+            ),
+        };
+        world[idx + 1] = raytracer.Hittable{
+            .sphere = Sphere.init(
+                Point3.init(0, 1, 0),
+                1.0,
+                if (materialcache.getPtr(
+                    "material1",
+                )) |ptr| ptr else unreachable,
+            ),
+        };
+        world[idx + 2] = raytracer.Hittable{
+            .sphere = Sphere.init(
+                Point3.init(-4, 1, 0),
+                1.0,
+                if (materialcache.getPtr(
+                    "material2",
+                )) |ptr| ptr else unreachable,
+            ),
+        };
+        world[idx + 3] = raytracer.Hittable{
+            .sphere = Sphere.init(
+                Point3.init(4, 1, 0),
+                1.0,
+                if (materialcache.getPtr(
+                    "material3",
+                )) |ptr| ptr else unreachable,
+            ),
+        };
+        idx = idx + 4;
+
+        const aspect_ratio = 16.0 / 9.0;
+        const image_width: u32 = 1200;
+        const samples_per_pixel = 500;
+        var scene_camera = Camera.init(
+            aspect_ratio,
+            image_width,
+            samples_per_pixel,
+        );
+        scene_camera.max_depth = 50;
+        scene_camera.vfov = math.degreesToRadians(f64, 20);
+        scene_camera.lookAt(
+            Vec3.init(13, 2, 3),
+            Vec3.init(0, 0, 0),
+            Vec3.init(0, 1, 0),
+            10,
+            math.degreesToRadians(f64, 0.6),
+        );
+
+        return Self{
+            .camera = scene_camera,
+            .allocator = allocator,
+            .materials = materialcache,
+            .shapes = world,
+        };
+    }
 
     pub fn initFromData(
         allocator: Allocator,
