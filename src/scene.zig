@@ -16,6 +16,8 @@ const Material = material.Material;
 const MaterialInitData = material.MaterialInitData;
 const Hittable = raytracer.Hittable;
 const Sphere = raytracer.Sphere;
+const Triangle = raytracer.Triangle;
+const Floor = raytracer.Floor;
 
 pub const SceneError = error{
     InvalidShape,
@@ -27,7 +29,11 @@ pub const ShapeInitData = struct {
     sphere: ?struct {
         center: vec3.Point3,
         radius: f64,
-    },
+    } = null,
+    triangle: ?struct {
+        verts: [3]vec3.Point3,
+    } = null,
+    floor: ?struct {} = null,
 };
 
 pub const SceneInitData = struct {
@@ -238,6 +244,14 @@ pub const Scene = struct {
                             sphere.radius,
                             material_ptr,
                         ),
+                    };
+                } else if (shape.triangle) |triangle| {
+                    dest_shape.* = Hittable{
+                        .triangle = Triangle.init(triangle.verts, material_ptr),
+                    };
+                } else if (shape.floor) |_| {
+                    dest_shape.* = Hittable{
+                        .floor = Floor{},
                     };
                 } else {
                     return SceneError.InvalidShape;

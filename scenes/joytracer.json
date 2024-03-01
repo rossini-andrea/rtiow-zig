@@ -1,16 +1,16 @@
 {
     "camera": {
-        "aspect_ratio": 1.777778,
-        "image_width": 1200,
+        "aspect_ratio": 1.333333,
+        "image_width": 640,
         "samples_per_pixel": 500,
         "max_depth": 50,
-        "vfov": 90,
+        "vfov": 45,
         "lookat": {
             "from": [0, 0, 1.77],
             "at": [0, 5.5, 1.77],
             "vup": [0.0, 0.0, 1.0],
-            "focus_distance": 10,
-            "defocus_angle": 0.6
+            "focus_distance": 5,
+            "defocus_angle": 0.1
         }
     },
     "materials": {

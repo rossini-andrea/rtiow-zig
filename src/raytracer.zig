@@ -3,6 +3,7 @@ const Interval = @import("interval.zig").Interval;
 const math = @import("std").math;
 const Point3 = vec3.Point3;
 const Vec3 = vec3.Vec3;
+const Color = vec3.Color;
 const Material = @import("material.zig").Material;
 
 pub const Ray = struct {
@@ -19,6 +20,27 @@ pub const Ray = struct {
     pub fn at(self: Ray, t: f64) vec3.Point3 {
         return self.origin.add(self.direction.scale(t));
     }
+
+    pub fn planeDistance(self: Ray, plane: Plane) ?f64 {
+        const denom = self.direction.dot(plane.normal);
+
+        if (-math.floatEps(f64) <= denom and
+            denom <= math.floatEps(f64))
+        {
+            return null;
+        }
+
+        const distance = plane
+            .origin
+            .sub(self.origin)
+            .dot(plane.normal) / denom;
+        return distance;
+    }
+};
+
+pub const Plane = struct {
+    origin: Point3,
+    normal: Vec3,
 };
 
 pub const HitRecord = struct {
@@ -48,6 +70,8 @@ pub const HitRecord = struct {
 
 pub const Hittable = union(enum) {
     sphere: Sphere,
+    triangle: Triangle,
+    floor: Floor,
 
     fn hitTest(
         self: Hittable,
@@ -56,6 +80,8 @@ pub const Hittable = union(enum) {
     ) ?HitRecord {
         return switch (self) {
             .sphere => |s| s.hitTest(r, ray_t),
+            .triangle => |t| t.hitTest(r, ray_t),
+            .floor => |f| f.hitTest(r, ray_t),
         };
     }
 };
@@ -136,6 +162,108 @@ pub const Sphere = struct {
             root,
             r,
             self.material,
+        );
+    }
+};
+
+pub const Triangle = struct {
+    vertices: [3]Point3,
+    normal: Vec3,
+    material: *const Material,
+
+    pub fn init(
+        vertices: [3]Point3,
+        material: *const Material,
+    ) Triangle {
+        const normal =
+            vertices[1].sub(vertices[0])
+            .cross(vertices[2].sub(vertices[1])).unitVector();
+        return Triangle{
+            .vertices = vertices,
+            .normal = normal,
+            .material = material,
+        };
+    }
+
+    fn hitTest(
+        self: Triangle,
+        r: Ray,
+        ray_t: Interval,
+    ) ?HitRecord {
+        const distance = r.planeDistance(Plane{ .origin = self.vertices[0], .normal = self.normal });
+
+        if (distance == null) {
+            return null;
+        }
+
+        if (!ray_t.surrounds(distance.?)) {
+            return null;
+        }
+
+        const p = r.at(distance.?);
+
+        // Check if the point is "behind" all three edges at once. If so
+        // it is between the edges.
+        if (Vec3.dot(self.normal, Vec3.cross(
+            self.vertices[1].sub(self.vertices[0]),
+            p.sub(self.vertices[1]),
+        )) > 0 and
+            Vec3.dot(self.normal, Vec3.cross(
+            self.vertices[2].sub(self.vertices[1]),
+            p.sub(self.vertices[2]),
+        )) > 0 and
+            Vec3.dot(self.normal, Vec3.cross(
+            self.vertices[0].sub(self.vertices[2]),
+            p.sub(self.vertices[0]),
+        )) > 0) {
+            return HitRecord.init(
+                p,
+                self.normal,
+                distance.?,
+                r,
+                self.material,
+            );
+        }
+
+        return null;
+    }
+};
+
+const white: Material = Material.initMetal(Color.init(1, 1, 1), 1);
+const black: Material = Material.initMetal(Color.init(0, 0, 0), 1);
+
+// An infinite plane with origin at ZERO and normal (0,0,1)
+pub const Floor = struct {
+    plane: Plane = Plane{
+        .origin = Point3.init(0, 0, 0),
+        .normal = Vec3.init(0, 0, 1),
+    },
+
+    fn hitTest(
+        self: Floor,
+        r: Ray,
+        ray_t: Interval,
+    ) ?HitRecord {
+        const distance = r.planeDistance(self.plane);
+
+        if (distance == null) {
+            return null;
+        }
+
+        if (!ray_t.surrounds(distance.?)) {
+            return null;
+        }
+
+        const p = r.at(distance.?);
+        const is_x_odd = @as(i64, @intFromFloat(@floor(p.x))) & 1;
+        const is_y_odd = @as(i64, @intFromFloat(@floor(p.y))) & 1;
+
+        return HitRecord.init(
+            p,
+            self.plane.normal,
+            distance.?,
+            r,
+            if (is_x_odd == is_y_odd) &white else &black,
         );
     }
 };
