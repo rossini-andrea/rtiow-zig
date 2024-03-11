@@ -73,13 +73,13 @@ pub const Camera = struct {
         image_width: u32,
         samples_per_pixel: u32,
     ) Self {
-        var image_width_f = @as(f64, @floatFromInt(image_width));
+        const image_width_f = @as(f64, @floatFromInt(image_width));
         var image_height_f = image_width_f / aspect_ratio;
         var image_height: u32 = @intFromFloat(image_height_f);
         image_height = if (image_height < 1) 1 else image_height;
         image_height_f = @as(f64, @floatFromInt(image_height));
 
-        var camera_center = Point3.init(0, 0, 0);
+        const camera_center = Point3.init(0, 0, 0);
 
         return Camera{
             .aspect_ratio = aspect_ratio,
@@ -223,7 +223,11 @@ pub const Camera = struct {
         const origin =
             self.defocusDiskSample();
         const ray_direction = pixel_sample.sub(origin);
-        return raytracer.Ray.init(origin, ray_direction);
+        return raytracer.Ray.init(
+            origin,
+            ray_direction,
+            random.rand(),
+        );
     }
 
     fn pixelSampleSquare(self: Camera) Vec3 {
@@ -264,8 +268,8 @@ pub const Camera = struct {
             return Color.init(0, 0, 0);
         }
 
-        var unit_direction = r.direction.unitVector();
-        var alpha = math.clamp(0.5 * (unit_direction.y + 1.0), 0.0, 1.0);
+        const unit_direction = r.direction.unitVector();
+        const alpha = math.clamp(0.5 * (unit_direction.y + 1.0), 0.0, 1.0);
         return vec3.Color
             .init(1.0, 1.0, 1.0)
             .scale(1.0 - alpha)

@@ -26,6 +26,14 @@ pub fn build(b: *std.Build) void {
 
     exe.linkLibC();
 
+    for ([_][]const u8{"args"}) |dep_name| {
+        const dep = b.dependency(dep_name, .{
+            .target = target,
+            .optimize = optimize,
+        });
+        exe.root_module.addImport(dep_name, dep.module(dep_name));
+    }
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).

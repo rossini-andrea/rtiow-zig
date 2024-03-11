@@ -88,7 +88,7 @@ pub const Material = struct {
 
 fn lambertianScatter(
     self: *const Material,
-    _: *const Ray,
+    ray: *const Ray,
     hit_record: *const HitRecord,
 ) ?ScatterResult {
     var diffuse_direction = hit_record.normal.add(
@@ -103,6 +103,7 @@ fn lambertianScatter(
         .ray = Ray.init(
             hit_record.p,
             diffuse_direction,
+            ray.time,
         ),
         .attenuation = self.albedo,
     };
@@ -126,6 +127,7 @@ fn metalScatter(
         .ray = Ray.init(
             hit_record.p,
             scattered_direction,
+            ray.time,
         ),
         .attenuation = self.albedo,
     };
@@ -161,10 +163,12 @@ fn dielectricScatter(
         unit_direction.reflect(
             hit_record.normal,
         );
+
     return ScatterResult{
         .ray = Ray.init(
             hit_record.p,
             direction,
+            ray.time,
         ),
         .attenuation = Color.init(1, 1, 1),
     };

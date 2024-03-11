@@ -1,0 +1,13 @@
+.{
+    .name = "rtiow-zig",
+    .version = "0.0.1",
+
+    .dependencies = .{
+        .args = .{
+            .path = "submodules/zig-args",
+        },
+    },
+    .paths = .{
+        "src",
+    },
+}

@@ -170,7 +170,7 @@ pub const Vec3 = struct {
         )).scale(
             etai_over_etat,
         );
-        const r_out_parallel = normal.scale(-@sqrt(math.fabs(
+        const r_out_parallel = normal.scale(-@sqrt(@abs(
             1.0 - r_out_perp.lengthSquared(),
         )));
         return r_out_perp.add(r_out_parallel);

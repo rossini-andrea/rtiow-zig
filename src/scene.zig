@@ -142,6 +142,11 @@ pub const Scene = struct {
                             if (materialcache.getPtr(
                                 std.mem.asBytes(&idx),
                             )) |ptr| ptr else unreachable,
+                            Vec3.init(
+                                0,
+                                random.ranged(0, 0.5),
+                                0,
+                            ),
                         ),
                     };
                     idx = idx + 1;
@@ -156,6 +161,7 @@ pub const Scene = struct {
                 if (materialcache.getPtr(
                     "material_ground",
                 )) |ptr| ptr else unreachable,
+                null,
             ),
         };
         world[idx + 1] = raytracer.Hittable{
@@ -165,6 +171,7 @@ pub const Scene = struct {
                 if (materialcache.getPtr(
                     "material1",
                 )) |ptr| ptr else unreachable,
+                null,
             ),
         };
         world[idx + 2] = raytracer.Hittable{
@@ -174,6 +181,7 @@ pub const Scene = struct {
                 if (materialcache.getPtr(
                     "material2",
                 )) |ptr| ptr else unreachable,
+                null,
             ),
         };
         world[idx + 3] = raytracer.Hittable{
@@ -183,10 +191,16 @@ pub const Scene = struct {
                 if (materialcache.getPtr(
                     "material3",
                 )) |ptr| ptr else unreachable,
+                null,
             ),
         };
         idx = idx + 4;
 
+        if (!allocator.resize(world, idx)) {
+            return error.OutOfMemory;
+        }
+
+        world.len = idx;
         const aspect_ratio = 16.0 / 9.0;
         const image_width: u32 = 1200;
         const samples_per_pixel = 500;
@@ -229,7 +243,7 @@ pub const Scene = struct {
             );
         }
 
-        var shapes = try allocator.alloc(
+        const shapes = try allocator.alloc(
             raytracer.Hittable,
             init_data.shapes.len,
         );
@@ -243,6 +257,7 @@ pub const Scene = struct {
                             sphere.center,
                             sphere.radius,
                             material_ptr,
+                            null,
                         ),
                     };
                 } else if (shape.triangle) |triangle| {

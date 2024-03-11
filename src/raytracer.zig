@@ -9,11 +9,17 @@ const Material = @import("material.zig").Material;
 pub const Ray = struct {
     origin: vec3.Point3,
     direction: vec3.Vec3,
+    time: f64,
 
-    pub fn init(origin: vec3.Point3, direction: vec3.Vec3) Ray {
+    pub fn init(
+        origin: vec3.Point3,
+        direction: vec3.Vec3,
+        time: f64,
+    ) Ray {
         return Ray{
             .origin = origin,
             .direction = direction,
+            .time = time,
         };
     }
 
@@ -57,7 +63,7 @@ pub const HitRecord = struct {
         ray: Ray,
         material: *const Material,
     ) HitRecord {
-        var front_face = (ray.direction.dot(outward_normal) < 0.0);
+        const front_face = (ray.direction.dot(outward_normal) < 0.0);
         return HitRecord{
             .p = p,
             .normal = if (front_face) outward_normal else outward_normal.neg(),
@@ -115,17 +121,28 @@ pub const Sphere = struct {
     center: Point3,
     radius: f64,
     material: *const Material,
+    velocity: ?Vec3 = null,
 
     pub fn init(
         center: Point3,
         radius: f64,
         material: *const Material,
+        velocity: ?Vec3,
     ) Sphere {
         return Sphere{
             .center = center,
             .radius = radius,
             .material = material,
+            .velocity = velocity,
         };
+    }
+
+    fn center_at_t(self: *const Sphere, time: f64) Point3 {
+        if (self.*.velocity) |velocity| {
+            return self.*.center.add(velocity.scale(time));
+        } else {
+            return self.*.center;
+        }
     }
 
     fn hitTest(
@@ -133,7 +150,8 @@ pub const Sphere = struct {
         r: Ray,
         ray_t: Interval,
     ) ?HitRecord {
-        const oc = r.origin.sub(self.center);
+        const center = self.center_at_t(r.time);
+        const oc = r.origin.sub(center);
         const a = r.direction.lengthSquared();
         const half_b = oc.dot(r.direction);
         const c = oc.lengthSquared() - self.radius * self.radius;
@@ -158,7 +176,7 @@ pub const Sphere = struct {
 
         return HitRecord.init(
             p,
-            p.sub(self.center).scale(1 / self.radius),
+            p.sub(center).scale(1 / self.radius),
             root,
             r,
             self.material,

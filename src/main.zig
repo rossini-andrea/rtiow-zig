@@ -1,6 +1,7 @@
 const std = @import("std");
 const json = std.json;
 const mem = std.mem;
+const args = @import("args");
 const stdio = @import("stdio.zig");
 const stdin_file = stdio.stdin_file;
 const stdout = stdio.stdout;
@@ -11,7 +12,9 @@ const raytracer = @import("raytracer.zig");
 const infinity = math.inf(f64);
 const Scene = @import("scene.zig").Scene;
 const SceneInitData = @import("scene.zig").SceneInitData;
-const Camera = @import("camera.zig").Camera;
+const camera = @import("camera.zig");
+const Camera = camera.Camera;
+const CameraInitData = camera.CameraInitData;
 const Material = @import("material.zig").Material;
 const Allocator = std.mem.Allocator;
 const Sphere = raytracer.Sphere;
@@ -59,7 +62,8 @@ fn parseArguments(
 }
 
 const AppArguments = struct {
-    finalrender: bool = false,
+    @"final-render": bool = false,
+    camera: ?[]const u8 = null,
 };
 
 pub fn main() !void {
@@ -72,10 +76,15 @@ pub fn main() !void {
         }
     }
 
-    const args = try parseArguments(AppArguments, allocator);
+    const options = try args.parseForCurrentProcess(
+        AppArguments,
+        allocator,
+        .print,
+    );
+    defer options.deinit();
     var scene: Scene = undefined;
 
-    if (args.finalrender) {
+    if (options.options.@"final-render") {
         scene = try Scene.initFinalRender(allocator);
     } else {
         var json_reader = JsonReader.init(
@@ -97,6 +106,29 @@ pub fn main() !void {
     }
 
     defer scene.deinit();
+
+    if (options.options.camera) |override_camera| {
+        var file = try std.fs.cwd().openFile(override_camera, .{});
+        defer file.close();
+        const reader = file.reader();
+        var json_reader = JsonReader.init(
+            allocator,
+            reader,
+        );
+        defer json_reader.deinit();
+
+        const camera_init_data = try json.parseFromTokenSource(
+            CameraInitData,
+            allocator,
+            &json_reader,
+            .{},
+        );
+        defer camera_init_data.deinit();
+
+        const new_camera = Camera.initFromData(camera_init_data.value);
+        scene.camera = new_camera;
+    }
+
     try scene.camera.render(scene.shapes);
     try stdout.context.flush(); // don't forget to flush!
 }
